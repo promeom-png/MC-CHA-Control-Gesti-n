@@ -31,4 +31,5 @@ export interface FinancialData {
   expenses: Expense[];
   sales: Sale[];
   settings: Settings;
+  lastBackupDate?: string;
 }

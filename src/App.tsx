@@ -14,7 +14,10 @@ import {
   Calendar,
   Camera,
   Loader2,
-  Upload
+  Upload,
+  Download,
+  Database,
+  AlertTriangle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GoogleGenAI, Type } from "@google/genai";
@@ -159,6 +162,47 @@ export default function App() {
   const updateSettings = (settings: Settings) => {
     setData(prev => ({ ...prev, settings }));
   };
+
+  const handleBackup = () => {
+    const backupData = { ...data, lastBackupDate: new Date().toISOString() };
+    const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `mc_cha_backup_${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    setData(backupData);
+  };
+
+  const handleRestore = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const importedData = JSON.parse(event.target?.result as string);
+        if (confirm('¿Estás seguro de que quieres restaurar esta copia de seguridad? Los datos actuales serán reemplazados.')) {
+          setData(importedData);
+          alert('Copia de seguridad restaurada con éxito.');
+        }
+      } catch (err) {
+        alert('Error al leer el archivo de copia de seguridad.');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
+  const daysSinceBackup = useMemo(() => {
+    if (!data.lastBackupDate) return Infinity;
+    const last = new Date(data.lastBackupDate).getTime();
+    const now = new Date().getTime();
+    return Math.floor((now - last) / (1000 * 60 * 60 * 24));
+  }, [data.lastBackupDate]);
 
   return (
     <div className="min-h-screen bg-slate-50 flex font-sans text-slate-900">
@@ -384,9 +428,32 @@ export default function App() {
               exit={{ opacity: 0 }}
               className="space-y-8"
             >
-              <header>
-                <h2 className="text-3xl font-bold tracking-tight">Historial de Transacciones</h2>
-                <p className="text-slate-500">Listado detallado de ingresos y gastos para {selectedMonth}</p>
+              <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+                <div>
+                  <h2 className="text-3xl font-bold tracking-tight">Historial de Transacciones</h2>
+                  <p className="text-slate-500">Listado detallado de ingresos y gastos para {selectedMonth}</p>
+                </div>
+                
+                <div className="flex flex-wrap items-center gap-3">
+                  {daysSinceBackup > 15 && (
+                    <div className="flex items-center gap-2 px-4 py-2 bg-amber-50 text-amber-700 rounded-xl border border-amber-200 text-xs font-bold animate-pulse">
+                      <AlertTriangle size={14} />
+                      {data.lastBackupDate ? `Última copia hace ${daysSinceBackup} días` : 'Sin copia de seguridad'}
+                    </div>
+                  )}
+                  
+                  <button 
+                    onClick={handleBackup}
+                    className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-xl text-sm font-bold hover:bg-slate-800 transition-all shadow-md"
+                  >
+                    <Download size={16} /> Copia de Seguridad
+                  </button>
+                  
+                  <label className="flex items-center gap-2 px-4 py-2 bg-white text-slate-700 border border-slate-200 rounded-xl text-sm font-bold hover:bg-slate-50 transition-all cursor-pointer shadow-sm">
+                    <Database size={16} /> Restaurar Copia
+                    <input type="file" accept=".json" className="hidden" onChange={handleRestore} />
+                  </label>
+                </div>
               </header>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
