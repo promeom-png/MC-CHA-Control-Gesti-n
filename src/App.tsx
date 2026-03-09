@@ -17,13 +17,21 @@ import {
   Upload,
   Download,
   Database,
-  AlertTriangle
+  AlertTriangle,
+  Cloud,
+  CloudOff,
+  LogIn,
+  LogOut,
+  User as UserIcon
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GoogleGenAI, Type } from "@google/genai";
 import { Business, Expense, Sale, Settings, FinancialData, ExpenseCategory, PaymentMethod } from './types';
+import { auth, db } from './lib/firebase';
+import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 
 // --- Constants ---
+const SHARED_DOC_ID = "mc_cha_shared_v1";
 const MC_COLOR = {
   bg: 'bg-orange-50',
   border: 'border-orange-200',
@@ -72,6 +80,7 @@ const StatCard = ({ title, value, icon: Icon, colorClass, subtitle }: any) => (
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'entry' | 'history' | 'settings'>('dashboard');
+  const [isSyncing, setIsSyncing] = useState(true);
   const [data, setData] = useState<FinancialData>(() => {
     const saved = localStorage.getItem('mc_cha_financial_data');
     if (saved) return JSON.parse(saved);
@@ -82,6 +91,29 @@ export default function App() {
     };
   });
 
+  // Firestore Sync Listener (Shared Mode)
+  useEffect(() => {
+    setIsSyncing(true);
+    const docRef = doc(db, "shared_data", SHARED_DOC_ID);
+    
+    const unsubscribe = onSnapshot(docRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const cloudData = docSnap.data() as FinancialData;
+        // Only update if cloud data is different to avoid loops
+        setData(cloudData);
+      } else {
+        // Initial upload if cloud is empty
+        setDoc(docRef, data);
+      }
+      setIsSyncing(false);
+    }, (error) => {
+      console.error("Firestore Sync Error:", error);
+      setIsSyncing(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -89,6 +121,12 @@ export default function App() {
 
   useEffect(() => {
     localStorage.setItem('mc_cha_financial_data', JSON.stringify(data));
+    
+    // Push to cloud automatically
+    if (!isSyncing) {
+      const docRef = doc(db, "shared_data", SHARED_DOC_ID);
+      setDoc(docRef, data).catch(err => console.error("Error pushing to cloud:", err));
+    }
   }, [data]);
 
   // --- Calculations ---
@@ -239,6 +277,20 @@ export default function App() {
             <span className="font-medium">Historial</span>
           </button>
         </nav>
+
+        <div className="p-4 border-t border-slate-700/50">
+          <div className="flex items-center gap-3 px-2">
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center border transition-all ${isSyncing ? 'bg-slate-700 border-slate-600' : 'bg-emerald-500/10 border-emerald-500/20'}`}>
+              {isSyncing ? <Loader2 size={16} className="animate-spin text-slate-400" /> : <Cloud size={16} className="text-emerald-400" />}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] font-bold text-white uppercase tracking-wider">Sincronización</p>
+              <p className="text-[9px] text-slate-400 truncate flex items-center gap-1 uppercase font-bold tracking-tighter">
+                {isSyncing ? 'Actualizando...' : 'Nube Conectada'}
+              </p>
+            </div>
+          </div>
+        </div>
 
         <div className="p-4 border-t border-slate-700/50">
           <div className="bg-slate-900/30 p-4 rounded-xl">
