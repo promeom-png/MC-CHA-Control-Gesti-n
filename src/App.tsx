@@ -620,7 +620,7 @@ function DataEntryForm({ business, color, onAddExpense, onAddSale }: any) {
           {
             parts: [
               { inlineData: { data: base64Data, mimeType: file.type } },
-              { text: "Extract the taxable base (base imponible) as a number and the supplier name (proveedor) from this invoice/receipt. Return ONLY a JSON object with keys 'amount' (number) and 'supplier' (string). If you can't find them, return null for those values." }
+              { text: "Extract data from this Spanish invoice/receipt. Taxable base (base imponible) as 'amount', supplier name as 'supplier', and date in YYYY-MM-DD format as 'date'. Return ONLY a JSON object. If a value is missing, use null." }
             ]
           }
         ],
@@ -630,7 +630,8 @@ function DataEntryForm({ business, color, onAddExpense, onAddSale }: any) {
             type: Type.OBJECT,
             properties: {
               amount: { type: Type.NUMBER },
-              supplier: { type: Type.STRING }
+              supplier: { type: Type.STRING },
+              date: { type: Type.STRING }
             }
           }
         }
@@ -639,6 +640,7 @@ function DataEntryForm({ business, color, onAddExpense, onAddSale }: any) {
       const result = JSON.parse(response.text || '{}');
       if (result.amount) setAmount(String(result.amount));
       if (result.supplier) setDescription(result.supplier);
+      if (result.date) setDate(result.date);
     } catch (error) {
       console.error("OCR Error:", error);
       alert("Error al escanear la factura. Por favor, inténtalo de nuevo.");
