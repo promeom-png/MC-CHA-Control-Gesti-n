@@ -650,7 +650,12 @@ function DataEntryForm({ business, color, onAddExpense, onAddSale }: any) {
 
       const base64Data = await compressImage(file);
 
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+      const apiKey = import.meta.env.VITE_GEMINI_API_KEY || (process.env as any).GEMINI_API_KEY;
+      if (!apiKey) {
+        throw new Error("No se encontró la clave API de Gemini (VITE_GEMINI_API_KEY)");
+      }
+
+      const ai = new GoogleGenAI({ apiKey });
       const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
         contents: [
@@ -678,9 +683,10 @@ function DataEntryForm({ business, color, onAddExpense, onAddSale }: any) {
       if (result.amount) setAmount(String(result.amount));
       if (result.supplier) setDescription(result.supplier);
       if (result.date) setDate(result.date);
-    } catch (error) {
+    } catch (error: any) {
       console.error("OCR Error:", error);
-      alert("Error al escanear la factura. Asegúrate de tener conexión y que la foto sea clara.");
+      const errorMsg = error?.message || "Error desconocido";
+      alert(`Error al escanear: ${errorMsg}. Asegúrate de que la VITE_GEMINI_API_KEY esté configurada en Vercel.`);
     } finally {
       setIsScanning(false);
       e.target.value = '';
