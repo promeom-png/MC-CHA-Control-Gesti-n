@@ -3,13 +3,13 @@ import { getFirestore } from "firebase/firestore";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyDjss4ZG_XFZtBUH-awpbznLMNShBW7M0w",
-  authDomain: "mc-cha-financials.firebaseapp.com",
-  projectId: "mc-cha-financials",
-  storageBucket: "mc-cha-financials.firebasestorage.app",
-  messagingSenderId: "894472431387",
-  appId: "1:894472431387:web:b1db4e2548e1450a9015be",
-  measurementId: "G-0BF5MRDBGW"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
 const app = initializeApp(firebaseConfig);
